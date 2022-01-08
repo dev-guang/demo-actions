@@ -35,5 +35,6 @@ jobs:
         env:
           AIHAO_COOKIES: ${{secrets.AIHAO_COOKIES}}
           YZMB_COOKIES: ${{secrets.YZMB_COOKIES}}
+          WAHA_COOKIES: ${{secrets.WAHA_COOKIES}}
         run: |
           node index.js

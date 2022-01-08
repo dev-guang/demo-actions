@@ -107,10 +107,54 @@ function shouldStartYZMBAction() {
   return getAiHaoButtonIndex() == 1;
 }
 
+function shouldStartWHAction() {
+  return getAiHaoButtonIndex() == 1;
+}
+
+async function wahaAction(page, client, cookiesBase64Str) {
+  console.log("start waha action");
+  if (!cookiesBase64Str) {
+    console.warn(`cookies missing, ignore waha action`);
+    return;
+  }
+  const cookies = JSON.parse(
+    Buffer.from(cookiesBase64Str, "base64").toString()
+  );
+  console.log("set cookies");
+  await page.setCookie(...cookies);
+  console.log("goto waha page");
+  await Promise.all([
+    page.goto("https://bbs.52waha.com/plugin.php?id=gsignin:index"),
+    page.setDefaultNavigationTimeout(0),
+    page.waitForNavigation({ waitUtil: "networkidle2" }),
+  ]);
+  // console.log("find button");
+  // document.querySelector("#um > p:nth-child(16) > a:nth-child(7)")
+  // const button = await page.waitForSelector(
+  //   '#um > p:nth-child(17) > a:nth-child(7)'
+  // );
+  // console.log("click action");
+  // await button.click();
+
+  // jspath: document.querySelector("#main > div.content > div.top > a")
+  // const result = await page.evaluate(() => {
+  //   document.querySelector("#main > div.content > div.top > a")
+  // });
+
+  // xpath: //*[@id="main"]/div[1]/div[1]/a
+  console.log("find action element");
+  const elements = await page.$x('//*[@id="main"]/div[1]/div[1]/a');
+  console.info("element click");
+  await elements[0].click();
+  console.log("finish waha action");
+}
+
 (async () => {
   const path = require("path");
   const startAt = new Date();
-  console.info(`start action hours ${startAt.getHours()}, UTC hours ${startAt.getUTCHours()}`);
+  console.info(
+    `start action hours ${startAt.getHours()}, UTC hours ${startAt.getUTCHours()}`
+  );
 
   let cacheFolder;
   try {
@@ -132,7 +176,7 @@ function shouldStartYZMBAction() {
   }
 
   const { browser, page, client } = browserInstances;
-  const { yzmbCookies, cookies } = require("./config");
+  const { yzmbCookies, cookies, wahaCookies } = require("./config");
 
   let occurError = false;
   if (shouldStartAiHaoAction()) {
@@ -162,6 +206,26 @@ function shouldStartYZMBAction() {
     }
   } else {
     console.log("skill yzmb action");
+  }
+
+  if (shouldStartWHAction()) {
+    console.log("start wh acrion");
+    try {
+      await wahaAction(page, client, wahaCookies);
+      await page.screenshot({
+        path: path.resolve(cacheFolder, "waha-success.jpg"),
+        type: "jpeg",
+      });
+    } catch (error) {
+      console.error("waha action error", error);
+      occurError = true;
+      await page.screenshot({
+        path: path.resolve(cacheFolder, "waha-error.jpg"),
+        type: "jpeg",
+      });
+    }
+  } else {
+    console.log("skill wh action");
   }
 
   await browser.close();
