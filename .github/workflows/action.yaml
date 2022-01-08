@@ -1,0 +1,39 @@
+name: "demo"
+on:
+  push:
+    branches: main
+  workflow_dispatch:
+
+  schedule:
+    # UTC
+    # 5 位：最小位为分：分 时 天 月 星期
+    # 6 位：最小位为秒：秒 分 时 天 月 星期
+    # 7 位：最大位为年：秒 分 时 天 月 星期 年
+    # 8:10, 13:10, 18:10 every day
+    - cron: "20 0,5,10 * * *"
+jobs:
+  automator:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12.x"
+      - name: Install dependencies
+        run: npm install
+      - name: Cache multi paths
+        uses: actions/cache@v2
+        with:
+          path: |
+            .cache
+            ~/.cache
+          key: ${{ secrets.CACHE_NAME }}-${{ github.run_id }}
+          restore-keys: ${{ secrets.CACHE_NAME }}-
+      - name: Run automator
+        env:
+          AIHAO_COOKIES: ${{secrets.AIHAO_COOKIES}}
+          YZMB_COOKIES: ${{secrets.YZMB_COOKIES}}
+        run: |
+          node index.js

@@ -1,0 +1,23 @@
+{
+  "name": "demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dev-guang/action-demo.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dev-guang/action-demo/issues"
+  },
+  "homepage": "https://github.com/dev-guang/action-demo#readme",
+  "dependencies": {
+    "puppeteer": "^13.0.1",
+    "puppeteer-extra": "^3.2.3"
+  }
+}
