@@ -104,11 +104,13 @@ function shouldStartAiHaoAction() {
 }
 
 function shouldStartYZMBAction() {
-  return getAiHaoButtonIndex() == 1;
+  const hours = new Date().getUTCHours();
+  return hours >= 0 && hours <= 5;
 }
 
 function shouldStartWHAction() {
-  return getAiHaoButtonIndex() == 1;
+  const hours = new Date().getUTCHours();
+  return hours >= 0 && hours <= 5;
 }
 
 async function wahaAction(page, client, cookiesBase64Str) {
