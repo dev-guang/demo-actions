@@ -17,7 +17,8 @@
   },
   "homepage": "https://github.com/dev-guang/action-demo#readme",
   "dependencies": {
-    "puppeteer": "^13.0.1",
-    "puppeteer-extra": "^3.2.3"
+    "puppeteer": "^13.7.0",
+    "puppeteer-extra": "^3.2.3",
+    "puppeteer-extra-plugin-stealth": "^2.9.0"
   }
 }

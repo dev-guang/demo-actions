@@ -1,238 +1,43 @@
-async function createBrowserInstances() {
+const { yzmbAction, wahaAction } = require("./actions/other");
+
+async function main() {
   const puppeteer = require("puppeteer-extra");
-  let browser = null;
-  let page = null;
 
-  try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        process.env.HTTP_PROXY
-          ? `--proxy-server=${process.env.HTTP_PROXY}`
-          : "",
-        "--disable-features=IsolateOrigins,site-per-process",
-        "--flag-switches-begin --disable-site-isolation-trials --flag-switches-end",
-      ],
-    });
-    page = await browser.newPage();
-    const client = await page.target().createCDPSession();
-    return { browser, page, client };
-  } catch (error) {
-    console.error("init browser error", error);
-    if (browser) {
-      await browser.close();
-    }
-    throw error;
-  }
-}
+  const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+  const { startAiHaoAction } = require("./actions/aihao");
+  puppeteer.use(StealthPlugin());
 
-async function createFolderIfNeeded(folderPath) {
-  const fs = require("fs").promises;
-  try {
-    await fs.access(folderPath);
-  } catch (error) {
-    await fs.mkdir(folderPath);
-  }
-}
+  // That's it, the rest is puppeteer usage as normal 😊
+  puppeteer.launch({ headless: true }).then(async (browser) => {
+    console.info('Browser launch', new Date());
+    const page = await browser.newPage();
+    await page.setDefaultNavigationTimeout(2 * 60 * 1000);
+    await page.setViewport({ width: 800, height: 600 });
 
-async function yzmbAction(page, client, cookiesBase64Str) {
-  console.log("start yzmb action");
-  if (!cookiesBase64Str) {
-    console.warn(`cookies missing, ignore yzmb action`);
-    return;
-  }
-  const cookies = JSON.parse(
-    Buffer.from(cookiesBase64Str, "base64").toString()
-  );
-  console.log("set cookies");
-  await page.setCookie(...cookies);
-  console.log("goto yzmb page");
-  await Promise.all([
-    page.goto("https://www.yunzmb.com/"),
-    page.setDefaultNavigationTimeout(0),
-    page.waitForNavigation({ waitUtil: "networkidle2" }),
-  ]);
-  console.log("find button");
-  const button = await page.waitForSelector("#pper_a");
-  console.log("click action");
-  await button.click();
-  console.log("finish yzmb action");
-}
+    // console.log(`Testing adblocker plugin..`)
+    // await page.goto('https://www.vanityfair.com')
+    // await page.waitForTimeout(1000)
+    // await page.screenshot({ path: 'adblocker.png', fullPage: true })
 
-async function aihaoAction(page, client, cookiesBase64Str) {
-  console.log("start aihao action");
-  if (!cookiesBase64Str) {
-    console.warn(`cookies missing, ignore aihao action`);
-    return;
-  }
-  const cookies = JSON.parse(
-    Buffer.from(cookiesBase64Str, "base64").toString()
-  );
-  console.log("set cookies");
-  await page.setCookie(...cookies);
-  console.log("goto aihao page");
-  await Promise.all([
-    page.goto("https://www.aihao.cc/plugin.php?id=daka"),
-    page.setDefaultNavigationTimeout(0),
-    page.waitForNavigation({ waitUtil: "networkidle2" }),
-  ]);
-  console.log("find button");
-  const button = await page.waitForSelector(
-    `button[name="button${getAiHaoButtonIndex()}"]`
-  );
-  console.log("click action");
-  await Promise.all([button.click(), page.waitForNavigation()]);
-  console.log("finish aihao action");
-}
+    // console.log(`Testing the stealth plugin..`)
+    // await page.goto('https://bot.sannysoft.com')
+    // await page.waitForTimeout(5000)
+    // await page.screenshot({ path: 'stealth.png', fullPage: true })
 
-function getAiHaoButtonIndex() {
-  const now = new Date();
-  const hours = now.getUTCHours();
-  if (hours >= 0 && hours < 1) {
-    return 1;
-  } else if (hours >= 5 && hours < 6) {
-    return 2;
-  } else if (hours >= 10 && hours < 11) {
-    return 3;
-  } else {
-    return -1;
-  }
-}
+    await startAiHaoAction(page);
 
-function shouldStartAiHaoAction() {
-  return getAiHaoButtonIndex() != -1;
-}
-
-function shouldStartYZMBAction() {
-  const hours = new Date().getUTCHours();
-  return hours >= 0 && hours <= 5;
-}
-
-function shouldStartWHAction() {
-  const hours = new Date().getUTCHours();
-  return hours >= 0 && hours <= 5;
-}
-
-async function wahaAction(page, client, cookiesBase64Str) {
-  console.log("start waha action");
-  if (!cookiesBase64Str) {
-    console.warn(`cookies missing, ignore waha action`);
-    return;
-  }
-  const cookies = JSON.parse(
-    Buffer.from(cookiesBase64Str, "base64").toString()
-  );
-  console.log("set cookies");
-  await page.setCookie(...cookies);
-  console.log("goto waha page");
-  await Promise.all([
-    page.goto("https://bbs.52waha.com/plugin.php?id=gsignin:index"),
-    page.setDefaultNavigationTimeout(0),
-    page.waitForNavigation({ waitUtil: "networkidle2" }),
-  ]);
-  // console.log("find button");
-  // document.querySelector("#um > p:nth-child(16) > a:nth-child(7)")
-  // const button = await page.waitForSelector(
-  //   '#um > p:nth-child(17) > a:nth-child(7)'
-  // );
-  // console.log("click action");
-  // await button.click();
-
-  // jspath: document.querySelector("#main > div.content > div.top > a")
-  // const result = await page.evaluate(() => {
-  //   document.querySelector("#main > div.content > div.top > a")
-  // });
-
-  // xpath: //*[@id="main"]/div[1]/div[1]/a
-  console.log("find action element");
-  const elements = await page.$x('//*[@id="main"]/div[1]/div[1]/a');
-  console.info("element click");
-  await elements[0].click();
-  console.log("finish waha action");
-}
-
-(async () => {
-  const path = require("path");
-  const startAt = new Date();
-  console.info(
-    `start action hours ${startAt.getHours()}, UTC hours ${startAt.getUTCHours()}`
-  );
-
-  let cacheFolder;
-  try {
-    // create cache folder if needed
-    cacheFolder = path.resolve(__dirname, ".cache");
-    await createFolderIfNeeded(cacheFolder);
-  } catch (error) {
-    cacheFolder = null;
-    console.error("cache folder invalid");
-  }
-  let browserInstances;
-  try {
-    // init
-    browserInstances = await createBrowserInstances();
-  } catch (error) {
-    console.error("init browser error", error);
-    process.exist(-1);
-    return;
-  }
-
-  const { browser, page, client } = browserInstances;
-  const { yzmbCookies, cookies, wahaCookies } = require("./config");
-
-  let occurError = false;
-  if (shouldStartAiHaoAction()) {
     try {
-      await aihaoAction(page, client, cookies);
-      await page.screenshot({
-        path: path.resolve(cacheFolder, "aihao-success.jpg"),
-        type: "jpeg",
-      });
+      await yzmbAction(page);
+      await wahaAction(page);
     } catch (error) {
-      console.error("aihao action error", error);
-      occurError = true;
+      console.error("error", error);
+      process.exit(-1);
     }
-  } else {
-    console.log("skill aihao action");
-  }
-  if (shouldStartYZMBAction()) {
-    try {
-      await yzmbAction(page, client, yzmbCookies);
-      await page.screenshot({
-        path: path.resolve(cacheFolder, "yzmb-success.jpg"),
-        type: "jpeg",
-      });
-    } catch (error) {
-      console.error("yzmb action error", error);
-      occurError = true;
-    }
-  } else {
-    console.log("skill yzmb action");
-  }
 
-  if (shouldStartWHAction()) {
-    console.log("start wh acrion");
-    try {
-      await wahaAction(page, client, wahaCookies);
-      await page.screenshot({
-        path: path.resolve(cacheFolder, "waha-success.jpg"),
-        type: "jpeg",
-      });
-    } catch (error) {
-      console.error("waha action error", error);
-      occurError = true;
-      await page.screenshot({
-        path: path.resolve(cacheFolder, "waha-error.jpg"),
-        type: "jpeg",
-      });
-    }
-  } else {
-    console.log("skill wh action");
-  }
 
-  await browser.close();
+    console.log(`All done, check the screenshots. ✨`);
+    await browser.close();
+  });
+}
 
-  if (occurError) {
-    process.exit(-1);
-  }
-})();
+main();
